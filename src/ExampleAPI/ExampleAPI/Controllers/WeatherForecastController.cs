@@ -8,8 +8,8 @@ namespace ExampleAPI.Controllers
     {
         private static readonly string[] Summaries = new[]
         {
-        "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-    };
+            "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+        };
 
         private readonly ILogger<WeatherForecastController> _logger;
 
@@ -19,15 +19,26 @@ namespace ExampleAPI.Controllers
         }
 
         [HttpGet(Name = "GetWeatherForecast")]
-        public IEnumerable<WeatherForecast> Get()
+        public IActionResult Get(string? numDays = "5")
         {
-            return Enumerable.Range(1, 5).Select(index => new WeatherForecast
+            // For response codes that are uncommon, there may not be named methods in which case you can use StatusCode().
+            //return StatusCode(418, "Stop trying to brew coffee with a teapot!");
+
+            IActionResult toReturn;
+            int numDaysInt;
+            if (!int.TryParse(numDays, out numDaysInt)) toReturn = BadRequest(new Exception("numDays must be a positive integer."));
+            else
             {
-                Date = DateTime.Now.AddDays(index),
-                TemperatureC = Random.Shared.Next(-20, 55),
-                Summary = Summaries[Random.Shared.Next(Summaries.Length)]
-            })
-            .ToArray();
+                toReturn = Ok(Enumerable.Range(1, numDaysInt).Select(index => new WeatherForecast
+                {
+                    Date = DateTime.Now.AddDays(index),
+                    TemperatureC = Random.Shared.Next(-20, 55),
+                    Summary = Summaries[Random.Shared.Next(Summaries.Length)]
+                })
+                .ToArray());
+            }
+            return toReturn;
+            
         }
     }
 }
