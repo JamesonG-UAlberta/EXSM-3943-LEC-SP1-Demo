@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using ExampleAPI.Models;
 
 namespace ExampleAPI.Controllers
 {
@@ -36,7 +37,6 @@ namespace ExampleAPI.Controllers
                 })
                 .ToArray());
             }
-            
         }
     }
 }
