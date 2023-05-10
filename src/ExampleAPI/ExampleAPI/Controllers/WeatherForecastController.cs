@@ -24,12 +24,11 @@ namespace ExampleAPI.Controllers
             // For response codes that are uncommon, there may not be named methods in which case you can use StatusCode().
             //return StatusCode(418, "Stop trying to brew coffee with a teapot!");
 
-            IActionResult toReturn;
             int numDaysInt;
-            if (!int.TryParse(numDays, out numDaysInt)) toReturn = BadRequest(new Exception("numDays must be a positive integer."));
+            if (!int.TryParse(numDays, out numDaysInt)) return BadRequest(new Exception("numDays must be a positive integer."));
             else
             {
-                toReturn = Ok(Enumerable.Range(1, numDaysInt).Select(index => new WeatherForecast
+                return Ok(Enumerable.Range(1, numDaysInt).Select(index => new WeatherForecast
                 {
                     Date = DateTime.Now.AddDays(index),
                     TemperatureC = Random.Shared.Next(-20, 55),
@@ -37,7 +36,6 @@ namespace ExampleAPI.Controllers
                 })
                 .ToArray());
             }
-            return toReturn;
             
         }
     }
