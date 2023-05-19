@@ -1,3 +1,6 @@
+using ExampleAPI.Data;
+using Microsoft.EntityFrameworkCore;
+
 namespace ExampleAPI
 {
     public class Program
@@ -7,6 +10,9 @@ namespace ExampleAPI
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+            builder.Services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseMySql(connectionString, new MySqlServerVersion(new Version(10, 4, 24))));
 
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

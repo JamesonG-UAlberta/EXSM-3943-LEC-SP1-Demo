@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using ExampleAPI.Models;
 using System.Xml.Linq;
+using ExampleAPI.Data;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -10,14 +11,21 @@ namespace ExampleAPI.Controllers
     [ApiController]
     public class ProductController : ControllerBase
     {
-        private static List<Product> products = new List<Product>();
+        private readonly ApplicationDbContext _context;
+
+        public ProductController(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
 
         // GET: api/<ProductController>
         [HttpGet]
         public IActionResult Get()
         {
-            return Ok(products);
+            return Ok(_context.Products.ToList());
         }
+
         // POST api/<ProductController>
         [HttpPost]
         public IActionResult Post(string name, string description)
@@ -26,11 +34,11 @@ namespace ExampleAPI.Controllers
             {
                 Product toCreate = new Product()
                 {
-                    ID = products.Count + 1,
                     Name = name,
                     Description = description
                 };
-                products.Add(toCreate);
+                _context.Products.Add(toCreate);
+                _context.SaveChanges();
                 return Created($"/product/{toCreate.ID}", toCreate);
             }
             catch (Exception ex)
@@ -38,17 +46,20 @@ namespace ExampleAPI.Controllers
                 return BadRequest(ex.Message);
             }
         }
+
+        // Because this is a primary key in a database now, you cannot change it the way we could with the list. You'd have to make a modification to the database config to allow that.
         // PATCH 
         [HttpPatch]
         public IActionResult Patch(int oldId, int newID)
         {
             try
             {
-                List<Product> targets = products.Where(product => product.ID == oldId).ToList();
+                List<Product> targets = _context.Products.Where(product => product.ID == oldId).ToList();
                 if (targets.Count == 0) return NotFound("Product ID was not found.");
                 if (targets.Count > 1) return StatusCode(500, "Multiple Products with that ID were found. This should not happen.");
                 Product target = targets.Single();
                 target.ID = newID;
+                _context.SaveChanges();
                 return Ok(target);
             }
             catch (Exception ex)
@@ -66,14 +77,14 @@ namespace ExampleAPI.Controllers
             switch (Request.Headers.ContentType)
             {
                 case "application/json":
-                    return Ok(products.Where(product => product.ID == id).Single());
+                    return Ok(_context.Products.Where(product => product.ID == id).Single());
                 case "text/plain":
-                    return Ok(products.Where(product => product.ID == id).Single().ToString());
+                    return Ok(_context.Products.Where(product => product.ID == id).Single().ToString());
                 default:
                     return BadRequest("Can only serve application/json and text/plain.");
             }
-           
         }
+
         // PUT api/<ProductController>/5
         [HttpPut("{id}")]
         public IActionResult Put(int id, string? name, string? description)
@@ -81,13 +92,14 @@ namespace ExampleAPI.Controllers
             try
             {
                 if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(description)) return BadRequest("Can't mutate record without at least one new value.");
-                List<Product> targets = products.Where(product => product.ID == id).ToList();
+                List<Product> targets = _context.Products.Where(product => product.ID == id).ToList();
                 if (targets.Count == 0) return NotFound("Product ID was not found.");
                 if (targets.Count > 1) return StatusCode(500, "Multiple Products with that ID were found. This should not happen.");
                 
                 Product target = targets.Single();
                 if (!string.IsNullOrWhiteSpace(name)) target.Name = name;
                 if (!string.IsNullOrWhiteSpace(description)) target.Description = description;
+                _context.SaveChanges();
                 return Ok(target);
             }
             catch (Exception ex)
@@ -103,11 +115,12 @@ namespace ExampleAPI.Controllers
         {
             try
             {
-                List<Product> targets = products.Where(product => product.ID == id).ToList();
+                List<Product> targets = _context.Products.Where(product => product.ID == id).ToList();
                 if (targets.Count == 0) return NotFound("Product ID was not found.");
                 if (targets.Count > 1) return StatusCode(500, "Multiple Products with that ID were found. This should not happen.");
                 Product target = targets.Single();
-                products.Remove(target);
+                _context.Products.Remove(target);
+                _context.SaveChanges();
                 return Ok(target);
             }
             catch (Exception ex)
