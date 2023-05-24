@@ -101,9 +101,9 @@ namespace ExampleAPI.Controllers
             };
             string header64 = Base64UrlEncoder.Encode(JsonConvert.SerializeObject(jwt.header));
             string body64 = Base64UrlEncoder.Encode(JsonConvert.SerializeObject(jwt.body));
-            using (SHA256 sha256 = SHA256.Create())
+            using (HMACSHA256 sha256 = new HMACSHA256(Encoding.UTF8.GetBytes(secret)))
             {
-                byte[] hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(header64+"."+body64+secret));
+                byte[] hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(header64 + "." + body64));
                 jwt.signature = Encoding.UTF8.GetString(hash);
             }
             string sig64 = Base64UrlEncoder.Encode(jwt.signature);
@@ -122,7 +122,7 @@ namespace ExampleAPI.Controllers
             {
                 string[] jwtPieces = auth.Split(' ')[1].Split('.');
                 byte[] hash;
-                using (SHA256 sha256 = SHA256.Create())
+                using (HMACSHA256 sha256 = new HMACSHA256(Encoding.UTF8.GetBytes(secret)))
                 {
                     hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(jwtPieces[0] + "." + jwtPieces[1]+secret));
                 }
