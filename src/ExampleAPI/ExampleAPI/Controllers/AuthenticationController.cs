@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Security.Cryptography;
 using Newtonsoft.Json;
+using Microsoft.IdentityModel.Tokens;
 using System;
 
 namespace ExampleAPI.Controllers
@@ -65,7 +66,7 @@ namespace ExampleAPI.Controllers
             try
             {
                 // Convert from base64 back to UTF8.
-                string decoded = Encoding.UTF8.GetString(Convert.FromBase64String(auth.Split(' ')[1]));
+                string decoded = Base64UrlEncoder.Decode(auth.Split(' ')[1]);
                 // Split the username from the password.
                 string[] credentials = decoded.Split(' ');
                 // Too few or too many arguments.
@@ -98,17 +99,14 @@ namespace ExampleAPI.Controllers
                     expiry = DateTime.Now.AddDays(1)
                 }
             };
+            string header64 = Base64UrlEncoder.Encode(JsonConvert.SerializeObject(jwt.header));
+            string body64 = Base64UrlEncoder.Encode(JsonConvert.SerializeObject(jwt.body));
             using (SHA256 sha256 = SHA256.Create())
             {
-                byte[] hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(jwt)+secret));
+                byte[] hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(header64+"."+body64+secret));
                 jwt.signature = Encoding.UTF8.GetString(hash);
             }
-
-            string headerJSON = JsonConvert.SerializeObject(jwt.header);
-            byte[] headerBytes = Encoding.UTF8.GetBytes(headerJSON);
-            string header64 = Convert.ToBase64String(headerBytes);
-            string body64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(jwt.body)));
-            string sig64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(jwt.signature));
+            string sig64 = Base64UrlEncoder.Encode(jwt.signature);
             return Ok($"Bearer {header64}.{body64}.{sig64}");
         }
 
@@ -123,17 +121,19 @@ namespace ExampleAPI.Controllers
             try
             {
                 string[] jwtPieces = auth.Split(' ')[1].Split('.');
-                string[] decodedPieces = jwtPieces.Select(piece => Encoding.UTF8.GetString(Convert.FromBase64String(piece))).ToArray();
+                byte[] hash;
+                using (SHA256 sha256 = SHA256.Create())
+                {
+                    hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(jwtPieces[0] + "." + jwtPieces[1]+secret));
+                }
+                string[] decodedPieces = jwtPieces.Select(piece => Base64UrlEncoder.Decode(piece)).ToArray();
                 JWT decoded = new JWT()
                 {
                     header = (JWT_Header)JsonConvert.DeserializeObject(decodedPieces[0], typeof(JWT_Header)),
                     body = (JWT_Body)JsonConvert.DeserializeObject(decodedPieces[1], typeof(JWT_Body))
                 };
-                using (SHA256 sha256 = SHA256.Create())
-                {
-                    byte[] hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(decoded) + secret));
-                    if (Encoding.UTF8.GetString(hash) != decodedPieces[2]) return StatusCode(401, "Invalid JWT.");
-                }
+                if (Encoding.UTF8.GetString(hash) != decodedPieces[2]) return StatusCode(401, "Failed checksum.");
+                if (decoded.body.expiry > DateTime.Now) return StatusCode(403, "JWT expired.");
             }
             catch (Exception e)
             {
