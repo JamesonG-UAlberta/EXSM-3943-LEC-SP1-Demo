@@ -73,16 +73,20 @@ namespace ExampleAPI.Controllers
         [HttpGet("{id}")]
         public IActionResult Get(int id)
         {
-            if (string.IsNullOrWhiteSpace(Request.Headers.ContentType)) return BadRequest("Must provide content-type header.");
-            switch (Request.Headers.ContentType)
+            if (AuthenticationController.Authenticate(Request.Headers.Authorization.ToString()))
             {
-                case "application/json":
-                    return Ok(_context.Products.Where(product => product.ID == id).Single());
-                case "text/plain":
-                    return Ok(_context.Products.Where(product => product.ID == id).Single().ToString());
-                default:
-                    return BadRequest("Can only serve application/json and text/plain.");
+                if (string.IsNullOrWhiteSpace(Request.Headers.ContentType)) return BadRequest("Must provide content-type header.");
+                switch (Request.Headers.ContentType)
+                {
+                    case "application/json":
+                        return Ok(_context.Products.Where(product => product.ID == id).Single());
+                    case "text/plain":
+                        return Ok(_context.Products.Where(product => product.ID == id).Single().ToString());
+                    default:
+                        return BadRequest("Can only serve application/json and text/plain.");
+                }
             }
+            else return Forbid();
         }
 
         // PUT api/<ProductController>/5

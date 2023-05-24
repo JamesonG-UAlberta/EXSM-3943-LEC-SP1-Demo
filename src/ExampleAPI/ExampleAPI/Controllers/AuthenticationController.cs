@@ -141,5 +141,36 @@ namespace ExampleAPI.Controllers
             }
             return Ok("JWT valid.");
         }
+
+        public static bool Authenticate(string authorization)
+        {
+            string auth = authorization;
+            // The user didn't give us even a username, so we have no idea who they are (hence 401).
+            if (string.IsNullOrWhiteSpace(auth)) return false;
+            // Ensure user is authenticating with Basic (username and password).
+            if (auth.Split(' ')[0] != "Bearer") return false;
+            try
+            {
+                string[] jwtPieces = auth.Split(' ')[1].Split('.');
+                byte[] hash;
+                using (HMACSHA256 sha256 = new HMACSHA256(Encoding.UTF8.GetBytes(secret)))
+                {
+                    hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(jwtPieces[0] + "." + jwtPieces[1] + secret));
+                }
+                string[] decodedPieces = jwtPieces.Select(piece => Base64UrlEncoder.Decode(piece)).ToArray();
+                JWT decoded = new JWT()
+                {
+                    header = (JWT_Header)JsonConvert.DeserializeObject(decodedPieces[0], typeof(JWT_Header)),
+                    body = (JWT_Body)JsonConvert.DeserializeObject(decodedPieces[1], typeof(JWT_Body))
+                };
+                if (Encoding.UTF8.GetString(hash) != decodedPieces[2]) return false;
+                if (decoded.body.expiry > DateTime.Now) return false;
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
+            return true;
+        }
     }
 }
