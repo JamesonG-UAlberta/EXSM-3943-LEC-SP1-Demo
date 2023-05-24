@@ -133,7 +133,7 @@ namespace ExampleAPI.Controllers
                     body = (JWT_Body)JsonConvert.DeserializeObject(decodedPieces[1], typeof(JWT_Body))
                 };
                 if (Encoding.UTF8.GetString(hash) != decodedPieces[2]) return StatusCode(401, "Failed checksum.");
-                if (decoded.body.expiry > DateTime.Now) return StatusCode(403, "JWT expired.");
+                if (decoded.body.expiry < DateTime.Now) return StatusCode(403, "JWT expired.");
             }
             catch (Exception e)
             {
@@ -164,7 +164,7 @@ namespace ExampleAPI.Controllers
                     body = (JWT_Body)JsonConvert.DeserializeObject(decodedPieces[1], typeof(JWT_Body))
                 };
                 if (Encoding.UTF8.GetString(hash) != decodedPieces[2]) return false;
-                if (decoded.body.expiry > DateTime.Now) return false;
+                if (decoded.body.expiry < DateTime.Now) return false;
             }
             catch (Exception e)
             {
